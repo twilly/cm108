@@ -109,6 +109,8 @@
 
 static int cm108_write (char *name, int iomask, int iodata);
 
+int cm108_set_gpio_pin (char *name, int num, int state);
+
 
 // The CM108, CM109, and CM119 datasheets all say that idProduct can be in the range 
 // of 0008 to 000f programmable by MSEL and MODE pin.  How can we tell the difference?
@@ -272,30 +274,65 @@ void print_inventory() {
 }
 
 void print_help() {
-    printf("cm108 -[hp]\n"
+    printf("cm108 -[hp] [-H <hid device>]\n"
            " -h: print this help\n"
-           " -p: print attached USB devices\n");
-
+           " -p: print attached USB devices\n"
+           " -H <dev>: use <dev> for I/O\n"
+           " -P <pin>: set on <pin>\n"
+           " -L <1/0>: set <pin> to 0 (low) or 1 (high)\n");
 }
 
 int main(int argc, char *argv[]){
     int opt;
+    char *hiddev = NULL;
+    int level = -1;
+    int pin = -1;
 
     if (argc <= 1) {
         print_help();
         return 0;
     }
 
-    while((opt = getopt(argc, argv, "hp")) != -1) {
-        switch(opt){
+    while ((opt = getopt(argc, argv, "hpH:P:L:")) != -1) {
+        switch (opt) {
         case '?':
         case 'h':
             print_help();
             return 0;
+        case 'H':
+            hiddev = optarg;
+            break;
+        case 'P':
+            pin = atoi(optarg);
+            if (pin < 1 || pin > 7){
+                printf("Invalid pin: %s\n", optarg);
+                return 1;
+            }
+            break;
+        case 'L':
+            level = atoi(optarg);
+            if (level < 0 || level > 1) {
+                printf("Invalid level: %s\n", optarg);
+                return 1;
+            }
+            break;
         case 'p':
             print_inventory();
             return 0;
         }
+    }
+
+    if ((pin != -1 || level != -1) && (!hiddev || pin == -1 || level == -1)) {
+        printf("-H, -P, and -L must be provided together.\n");
+        return 1;
+    }
+
+    if (pin != -1) {
+        if (cm108_set_gpio_pin(hiddev, pin, level)) {
+            printf("Failed setting GPIO pin.\n");
+            return 1;
+        }
+        return 0;
     }
 
     return 1;
