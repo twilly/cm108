@@ -1,4 +1,8 @@
 //
+//    Adapted for standalone use by Tristan Willy.
+//
+//    Copyright (C) 2020  Tristan Willy, KF6MUY
+//
 //    This file is part of Dire Wolf, an amateur radio packet TNC.
 //
 //    Copyright (C) 2017  John Langner, WB2OSZ
@@ -88,29 +92,6 @@
  *
  *---------------------------------------------------------------*/
 
-#ifndef USE_CM108
-
-#ifdef CM108_MAIN
-
-#include "direwolf.h"
-#include "textcolor.h"
-
-int main (void)
-{
-	text_color_init (0);    // Turn off text color.
-	dw_printf ("CM108 PTT support was disabled in Makefile.linux.\n");
-	dw_printf ("It was excluded because /usr/include/libudev.h was missing.\n");
-	dw_printf ("Install it with \"sudo apt-get install libudev-dev\" or\n");
-	dw_printf ("\"sudo yum install libudev-devel\" then rebuild.\n");
-	return (0);
-}
-
-#endif
-
-#else	// USE_CM108 is defined.
-
-#include "direwolf.h"
-
 #include <libudev.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,9 +106,6 @@ int main (void)
 #include <fcntl.h>
 #include <errno.h>
 #include <linux/hidraw.h>		// for HIDIOCGRAWINFO
-
-#include "textcolor.h"
-#include "cm108.h"
 
 static int cm108_write (char *name, int iomask, int iodata);
 
@@ -252,19 +230,15 @@ int cm108_inventory (struct thing_s *things, int max_things);
 
 #define MAXX_THINGS 60
 
-#ifdef CM108_MAIN
-
 int main (void)
 {
 	struct thing_s things[MAXX_THINGS];
 	int num_things;
 	int i;
 
-	text_color_init (0);    // Turn off text color.
-
 	num_things = cm108_inventory (things, MAXX_THINGS);
 
-	dw_printf ("    VID  PID   %-*s %-*s %-*s %-*s"
+	printf ("    VID  PID   %-*s %-*s %-*s %-*s"
 #if EXTRA
 						" %-*s"
 #endif
@@ -277,7 +251,7 @@ int main (void)
 #endif
 							);
 
-	dw_printf ("    ---  ---   %-*s %-*s %-*s %-*s"
+	printf ("    ---  ---   %-*s %-*s %-*s %-*s"
 #if EXTRA
 						" %-*s"
 #endif
@@ -291,7 +265,7 @@ int main (void)
 							);
 	for (i = 0; i < num_things; i++) {
 
-	  dw_printf ("%2s  %04x %04x  %-*s %-*s %-*s %-*s"
+	  printf ("%2s  %04x %04x  %-*s %-*s %-*s %-*s"
 #if EXTRA
 						" %-*s"
 #endif
@@ -311,7 +285,6 @@ int main (void)
 	return (0);
 }
 
-#endif 	// CM108_MAIN
 
 
 
@@ -350,8 +323,7 @@ int cm108_inventory (struct thing_s *things, int max_things)
  */
 	udev = udev_new();
 	if (!udev) {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf("INTERNAL ERROR: Can't create udev.\n");
+	  printf("INTERNAL ERROR: Can't create udev.\n");
 	  return (-1);
 	}
 	
@@ -396,8 +368,7 @@ int cm108_inventory (struct thing_s *things, int max_things)
  */
 	udev = udev_new();
 	if (!udev) {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf("INTERNAL ERROR: Can't create udev.\n");
+	  printf("INTERNAL ERROR: Can't create udev.\n");
 	  return (-1);
 	}
 
@@ -460,8 +431,7 @@ int cm108_inventory (struct thing_s *things, int max_things)
 	int e = regcomp (&pcm_re, "pcmC([0-9]+)D([0-9]+)[cp]", REG_EXTENDED);
 	if (e) {
 	  regerror (e, &pcm_re, emsg, sizeof(emsg));
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf("INTERNAL ERROR:  %s:%d: %s\n", __FILE__, __LINE__, emsg);
+	  printf("INTERNAL ERROR:  %s:%d: %s\n", __FILE__, __LINE__, emsg);
 	  return (-1);
 	}
 
@@ -506,18 +476,19 @@ void cm108_find_ptt (char *output_audio_device, char *ptt_device,  int ptt_devic
 	int num_things;
 	int i;
 
-	strlcpy (ptt_device, "", ptt_device_size);
+	ptt_device[0] = 0;
 	num_things = cm108_inventory (things, MAXX_THINGS);
 
 	for (i = 0; i < num_things; i++) {
 
 	  if (GOOD_DEVICE(things[i].vid,things[i].pid) ) {
 	    if (strcmp(output_audio_device, things[i].plughw) == 0) {
-	      strlcpy (ptt_device, things[i].devnode_hidraw, ptt_device_size);
+	      strncpy (ptt_device, things[i].devnode_hidraw, ptt_device_size);
 	    }
 	  }
 	}
-	
+
+    ptt_device[ptt_device_size-1] = 0;
 }  /* end cm108_find_ptt */
 
 
@@ -554,14 +525,12 @@ int cm108_set_gpio_pin (char *name, int num, int state)
 	int iodata;
 
 	if (num < 1 || num > 8) {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf("%s CM108 GPIO number %d must be in range of 1 thru 8.\n", name, num);
+	  printf("%s CM108 GPIO number %d must be in range of 1 thru 8.\n", name, num);
 	  return (-1);
 	}
 
 	if (state != 0 && state != 1) {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf("%s CM108 GPIO state %d must be 0 or 1.\n", name, state);
+	  printf("%s CM108 GPIO state %d must be 0 or 1.\n", name, state);
 	  return (-1);
 	}
 
@@ -604,7 +573,7 @@ static int cm108_write (char *name, int iomask, int iodata)
 	int n;
 
 	//text_color_set(DW_COLOR_DEBUG);
-	//dw_printf ("TEMP DEBUG cm108_write:  %s %d %d\n", name, iomask, iodata);
+	//printf ("TEMP DEBUG cm108_write:  %s %d %d\n", name, iomask, iodata);
 
 /*
  * By default, the USB HID are accessible only by root:
@@ -641,13 +610,12 @@ static int cm108_write (char *name, int iomask, int iodata)
 
 	fd = open (name, O_WRONLY);
 	if (fd == -1) {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf ("Could not open %s for write, errno=%d\n", name, errno);
+	  printf ("Could not open %s for write, errno=%d\n", name, errno);
 	  if (errno == EACCES) {		// 13
-	    dw_printf ("Type \"ls -l %s\" and verify that it has audio group rw similar to this:\n", name);
-	    dw_printf ("    crw-rw---- 1 root audio 247, 0 Oct  6 19:24 %s\n", name);
-	    dw_printf ("rather than root-only access like this:\n");
-	    dw_printf ("    crw------- 1 root root 247, 0 Sep 24 09:40 %s\n", name);
+	    printf ("Type \"ls -l %s\" and verify that it has audio group rw similar to this:\n", name);
+	    printf ("    crw-rw---- 1 root audio 247, 0 Oct  6 19:24 %s\n", name);
+	    printf ("rather than root-only access like this:\n");
+	    printf ("    crw------- 1 root root 247, 0 Sep 24 09:40 %s\n", name);
 	  }
 	  return (-1);
 	}
@@ -658,13 +626,11 @@ static int cm108_write (char *name, int iomask, int iodata)
 	n = ioctl(fd, HIDIOCGRAWINFO, &info);
 	if (n == 0) {
 	  if ( ! GOOD_DEVICE(info.vendor, info.product)) {
-	    text_color_set(DW_COLOR_ERROR);
-	    dw_printf ("ioctl HIDIOCGRAWINFO failed for %s. errno = %d.\n", name, errno);
+	    printf ("ioctl HIDIOCGRAWINFO failed for %s. errno = %d.\n", name, errno);
 	  }
 	}
 	else {
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf ("%s is not a supported device type.  Proceed at your own risk.  vid=%04x pid=%04x\n", name, info.vendor, info.product);
+	  printf ("%s is not a supported device type.  Proceed at your own risk.  vid=%04x pid=%04x\n", name, info.vendor, info.product);
 	}
 #endif
 	// To make a long story short, I think we need 0 for the first two bytes.
@@ -686,14 +652,13 @@ static int cm108_write (char *name, int iomask, int iodata)
 	  //  as pi		EACCES          13      /* Permission denied */
 	  //  as root		EPIPE           32      /* Broken pipe - Happens if we send 4 bytes */
 
-	  text_color_set(DW_COLOR_ERROR);
-	  dw_printf ("Write to %s failed, n=%d, errno=%d\n", name, n, errno);
+	  printf ("Write to %s failed, n=%d, errno=%d\n", name, n, errno);
 
 	  if (errno == EACCES) {
-	    dw_printf ("Type \"ls -l %s\" and verify that it has audio group rw similar to this:\n", name);
-	    dw_printf ("    crw-rw---- 1 root audio 247, 0 Oct  6 19:24 %s\n", name);
-	    dw_printf ("rather than root-only access like this:\n");
-	    dw_printf ("    crw------- 1 root root 247, 0 Sep 24 09:40 %s\n", name);
+	    printf ("Type \"ls -l %s\" and verify that it has audio group rw similar to this:\n", name);
+	    printf ("    crw-rw---- 1 root audio 247, 0 Oct  6 19:24 %s\n", name);
+	    printf ("rather than root-only access like this:\n");
+	    printf ("    crw------- 1 root root 247, 0 Sep 24 09:40 %s\n", name);
 	  }
 
 	  close (fd);
@@ -705,8 +670,5 @@ static int cm108_write (char *name, int iomask, int iodata)
 
 }  /* end cm108_write */
 
-#endif   // ifdef USE_CM108
-
 /* end cm108.c */
 
-	
