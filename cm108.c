@@ -217,21 +217,9 @@ struct thing_s {
 int cm108_inventory (struct thing_s *things, int max_things);
 
 
-/*-------------------------------------------------------------------
- *
- * Name:	main
- *
- * Purpose:	Test program to list USB audio and HID devices.
- *
- *		sudo apt-get install libudev-dev
- *		gcc -DCM108_MAIN textcolor.c -l udev
- *
- *------------------------------------------------------------------*/
-
 #define MAXX_THINGS 60
 
-int main (void)
-{
+void print_inventory() {
 	struct thing_s things[MAXX_THINGS];
 	int num_things;
 	int i;
@@ -281,10 +269,37 @@ int main (void)
 #endif
 							);
 	}
-
-	return (0);
 }
 
+void print_help() {
+    printf("cm108 -[hp]\n"
+           " -h: print this help\n"
+           " -p: print attached USB devices\n");
+
+}
+
+int main(int argc, char *argv[]){
+    int opt;
+
+    if (argc <= 1) {
+        print_help();
+        return 0;
+    }
+
+    while((opt = getopt(argc, argv, "hp")) != -1) {
+        switch(opt){
+        case '?':
+        case 'h':
+            print_help();
+            return 0;
+        case 'p':
+            print_inventory();
+            return 0;
+        }
+    }
+
+    return 1;
+}
 
 
 
