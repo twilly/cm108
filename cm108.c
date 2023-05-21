@@ -304,7 +304,7 @@ int main(int argc, char *argv[]){
             break;
         case 'P':
             pin = atoi(optarg);
-            if (pin < 1 || pin > 7){
+            if (pin < 1 || pin > 8){
                 printf("Invalid pin: %s\n", optarg);
                 return 1;
             }
