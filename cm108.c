@@ -279,7 +279,7 @@ void print_help() {
            " -p: print attached USB devices\n"
            " -H <dev>: use <dev> for I/O\n"
            " -P <pin>: set on <pin>\n"
-           " -L <1/0>: set <pin> to 0 (low) or 1 (high)\n");
+           " -L <1/0/On/Off>: set <pin> to 0 (low) or 1 (high)\n");
 }
 
 int main(int argc, char *argv[]){
@@ -310,7 +310,16 @@ int main(int argc, char *argv[]){
             }
             break;
         case 'L':
-            level = atoi(optarg);
+            if (optarg[0] <= '0' || optarg[0] >= '9') {
+                // string argument
+                if (strncasecmp(optarg, "On", 3) == 0) {
+                    level = 1;
+                } else if (strncasecmp(optarg, "Off", 4) == 0) {
+                    level = 0;
+                }
+            } else {
+                level = atoi(optarg);
+            }
             if (level < 0 || level > 1) {
                 printf("Invalid level: %s\n", optarg);
                 return 1;
